@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Car Game</title>
+    <link rel="shortcut icon" href="car.png" type="image/x-icon">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            text-decoration: none;
+            list-style: none;
+        }
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block; 
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 16px; 
+        }
+        #speed {
+            position: absolute;
+            top: 40px; 
+            left: 10px; 
+            color: white; 
+            font-size: 16px; 
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: space-between;
+            width: 80%;
+        }
+        .button {
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            flex: 1;
+            margin: 0 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Use W, A, S, D or the buttons to drive the car</div>
+    <div id="speed">Speed: 0</div>
+    <div class="controls">
+        <button class="button" id="gas">Gas</button>
+        <button class="button" id="brake">Brake</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, car, clock;
+        const MAX_SPEED = 1; // Maximum speed
+        const ACCELERATION = 0.05; // Acceleration rate
+        const DECELERATION = 0.1; // Deceleration rate
+        const TURN_SPEED = 0.05; // Turn speed
+        let currentSpeed = 0; // Current speed
+        const keys = {};
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Background color
+            scene.background = new THREE.Color(0x87CEEB); // Light blue color
+
+            // Create a simple ground
+            const groundGeometry = new THREE.PlaneGeometry(200, 200);
+            const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            scene.add(ground);
+
+            // Load texture for the car
+            const textureLoader = new THREE.TextureLoader();
+            const carTexture = textureLoader.load(
+                'porsche.png', // Ensure this path is correct
+                () => {
+                    console.log("Car texture loaded successfully");
+                    createCar(carTexture);
+                },
+                undefined,
+                (error) => {
+                    console.error("An error occurred while loading the texture:", error);
+                    // Fallback to a default color if the texture fails to load
+                    createCar(new THREE.MeshBasicMaterial({ color: 0xff0000 })); // Default red color
+                }
+            );
+
+            camera.position.set(0, 2, 5); // Set camera position
+            camera.lookAt(0, 0, 0);
+
+            clock = new THREE.Clock();
+
+            // Event listeners for resizing and controls
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.getElementById('gas').addEventListener('mousedown', accelerate);
+            document.getElementById('gas').addEventListener('mouseup', stop);
+            document.getElementById('brake').addEventListener('mousedown', brake);
+            document.getElementById('brake').addEventListener('mouseup', stop);
+            animate();
+        }
+
+        function createCar(material) {
+            const carGeometry = new THREE.BoxGeometry(1, 0.5, 2);
+            car = new THREE.Mesh(carGeometry, material);
+            car.position.set(0, 0.25, 0); // Center the car
+            scene.add(car);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onKeyDown(event) {
+            keys[event.key] = true;
+        }
+
+        function onKeyUp(event) {
+            keys[event.key] = false;
+        }
+
+        function accelerate() {
+            if (currentSpeed < MAX_SPEED) {
+                currentSpeed += ACCELERATION;
+            }
+        }
+
+        function brake() {
+            if (currentSpeed > 0) {
+                currentSpeed -= DECELERATION;
+            }
+        }
+
+        function stop() {
+            // Do nothing, just stop accelerating or braking
+        }
+
+        function update() {
+            // Handle keyboard controls
+            if (keys['w']) accelerate(); // Gas
+            if (keys['s']) brake();      // Brake
+            if (keys['a']) car.rotation.y += TURN_SPEED; // Turn left
+            if (keys['d']) car.rotation.y -= TURN_SPEED; // Turn right
+
+            // Move the car forward based on current speed
+            car.position.z -= currentSpeed;
+
+            // Update speed display
+            document.getElementById('speed').innerText = `Speed: ${Math.round(currentSpeed * 100)}`;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            update(); // Update car position based on current speed
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>
